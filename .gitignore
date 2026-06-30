@@ -1,0 +1,31 @@
+# dependencies
+node_modules/
+
+# Next.js build output and caches
+.next/
+out/
+
+# Prisma/generated output
+lib/generated/
+prisma/dev.db
+prisma/dev.db-*
+prisma/init.sql
+
+# local environment
+.env
+.env*.local
+!.env.example
+
+# TypeScript and tooling caches
+*.tsbuildinfo
+.turbo/
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS/editor noise
+.DS_Store
+Thumbs.db

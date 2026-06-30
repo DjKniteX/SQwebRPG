@@ -1,0 +1,506 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String      @id @default(cuid())
+  email        String      @unique
+  passwordHash String
+  role         String      @default("PLAYER")
+  createdAt    DateTime    @default(now())
+  characters   Character[]
+  messages     ChatMessage[]
+}
+
+model Character {
+  id              String            @id @default(cuid())
+  userId          String
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name            String            @unique
+  classId         String
+  class           Class             @relation(fields: [classId], references: [id])
+  level           Int               @default(1)
+  exp             Int               @default(0)
+  statPoints      Int               @default(0)
+  gold            Int               @default(0)
+  hp              Int
+  mp              Int
+  maxHp           Int
+  maxMp           Int
+  attack          Int
+  defense         Int
+  strength        Int               @default(1)
+  dexterity       Int               @default(1)
+  agility         Int               @default(1)
+  intellect       Int               @default(1)
+  wisdom          Int               @default(1)
+  stamina         Int               @default(1)
+  roomId          String
+  room            Room              @relation(fields: [roomId], references: [id])
+  lastSeenAt      DateTime?
+  lastAggroAt     DateTime?
+  inventory       InventoryItem[]
+  equipment       Equipment[]
+  spells          CharacterSpell[]
+  quests          CharacterQuest[]
+  partyMembers    PartyMember[]
+  npcPartyMembers NPCPartyMember[]
+  dungeonMembers  DungeonInstanceMember[]
+  statusEffects   CharacterStatusEffect[]
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+}
+
+model Class {
+  id           String           @id
+  name         String
+  description  String
+  baseHp       Int
+  baseMp       Int
+  baseAttack   Int
+  baseDefense  Int
+  statTemplate StatTemplate?
+  spells       Spell[]
+  characters   Character[]
+  items        Item[]
+}
+
+model StatTemplate {
+  id        String @id
+  classId   String @unique
+  class     Class  @relation(fields: [classId], references: [id], onDelete: Cascade)
+  strength  Int
+  dexterity Int
+  agility   Int
+  intellect Int
+  wisdom    Int
+  stamina   Int
+}
+
+model Zone {
+  id          String @id
+  name        String
+  description String
+  rooms       Room[]
+  mapGroups   MapGroup[]
+}
+
+model MapGroup {
+  id          String @id
+  name        String
+  description String
+  category    String @default("Area")
+  zoneId      String?
+  zone        Zone?  @relation(fields: [zoneId], references: [id])
+  rooms       Room[]
+}
+
+model Room {
+  id             String          @id
+  name           String
+  description    String
+  zoneId         String
+  zone           Zone            @relation(fields: [zoneId], references: [id])
+  safe           Boolean         @default(false)
+  requiredLevel  Int             @default(1)
+  requiredItemId String?
+  x              Int             @default(0)
+  y              Int             @default(0)
+  mapTileType    String          @default("field")
+  mapIcon        String?
+  imageUrl       String?
+  category       String          @default("Area")
+  subType        String          @default("Room")
+  mapGroupId     String?
+  mapGroup       MapGroup?       @relation(fields: [mapGroupId], references: [id])
+  exitsFrom      RoomExit[]      @relation("ExitFrom")
+  exitsTo        RoomExit[]      @relation("ExitTo")
+  characters     Character[]
+  roomMonsters   RoomMonster[]
+  npcs           NPC[]
+  recruitables   RecruitableNPC[]
+  dungeonRooms   DungeonRoom[]
+}
+
+model RoomExit {
+  id            String @id @default(cuid())
+  fromRoomId    String
+  fromRoom      Room   @relation("ExitFrom", fields: [fromRoomId], references: [id], onDelete: Cascade)
+  toRoomId      String
+  toRoom        Room   @relation("ExitTo", fields: [toRoomId], references: [id], onDelete: Cascade)
+  direction     String
+  requiredLevel Int    @default(1)
+  requiredItemId String?
+
+  @@unique([fromRoomId, direction])
+}
+
+model Monster {
+  id          String        @id
+  name        String
+  description String
+  inspectText String?
+  dialogue    String?
+  category    String        @default("Regular")
+  subType     String        @default("Monster")
+  level       Int
+  maxHp       Int
+  attack      Int
+  defense     Int
+  expReward   Int
+  goldReward  Int
+  boss        Boolean       @default(false)
+  aggressive  Boolean      @default(false)
+  roomSpawns  RoomMonster[]
+  lootTableId String?
+  lootTable   LootTable?    @relation(fields: [lootTableId], references: [id])
+}
+
+model RoomMonster {
+  id         String   @id @default(cuid())
+  roomId     String
+  room       Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  monsterId  String
+  monster    Monster  @relation(fields: [monsterId], references: [id], onDelete: Cascade)
+  currentHp  Int
+  respawnAt  DateTime?
+
+  @@index([roomId])
+}
+
+model NPC {
+  id          String  @id
+  name        String
+  role        String
+  dialogue    String
+  inspectText String?
+  roomId      String
+  room        Room    @relation(fields: [roomId], references: [id])
+  questSource Quest[]
+  shop        Shop?
+}
+
+model RecruitableNPC {
+  id          String           @id
+  name        String
+  role        String
+  level       Int
+  hp          Int
+  mp          Int
+  attack      Int
+  defense     Int
+  skill       String
+  cost        Int
+  requirement String?
+  dialogue    String
+  availability String          @default("available")
+  aiBehavior  String
+  roomId      String
+  room        Room             @relation(fields: [roomId], references: [id])
+  partyLinks  NPCPartyMember[]
+}
+
+model Party {
+  id        String        @id @default(cuid())
+  leaderId  String
+  createdAt DateTime      @default(now())
+  members   PartyMember[]
+  npcs      NPCPartyMember[]
+}
+
+model PartyMember {
+  id          String    @id @default(cuid())
+  partyId     String
+  party       Party     @relation(fields: [partyId], references: [id], onDelete: Cascade)
+  characterId String
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  status      String    @default("ACTIVE")
+
+  @@unique([partyId, characterId])
+}
+
+model NPCPartyMember {
+  id               String         @id @default(cuid())
+  partyId          String
+  party            Party          @relation(fields: [partyId], references: [id], onDelete: Cascade)
+  characterId      String
+  character        Character      @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  recruitableNpcId String
+  recruitableNpc   RecruitableNPC @relation(fields: [recruitableNpcId], references: [id])
+
+  @@unique([characterId, recruitableNpcId])
+}
+
+model Quest {
+  id             String           @id
+  title          String
+  description    String
+  category       String
+  type           String
+  subType        String           @default("General")
+  sourceType     String
+  sourceNpcId    String?
+  sourceNpc      NPC?             @relation(fields: [sourceNpcId], references: [id])
+  repeatable     Boolean          @default(false)
+  prerequisiteId String?
+  requiredLevel  Int              @default(1)
+  completionText String
+  rewardExp      Int
+  rewardGold     Int
+  rewardItemId   String?
+  objectives     QuestObjective[]
+  characterLinks CharacterQuest[]
+}
+
+model QuestObjective {
+  id          String @id @default(cuid())
+  questId     String
+  quest       Quest  @relation(fields: [questId], references: [id], onDelete: Cascade)
+  kind        String
+  targetId    String
+  targetCount Int    @default(1)
+  description String
+}
+
+model CharacterQuest {
+  id          String    @id @default(cuid())
+  characterId String
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  questId     String
+  quest       Quest     @relation(fields: [questId], references: [id], onDelete: Cascade)
+  status      String    @default("ACTIVE")
+  progress    Int       @default(0)
+
+  @@unique([characterId, questId])
+}
+
+model Item {
+  id            String          @id
+  name          String
+  description   String
+  type          String
+  category      String          @default("General")
+  subType       String          @default("Misc")
+  rarity        String
+  value         Int
+  sellValue     Int?
+  stackable     Boolean
+  usable        Boolean
+  equippable    Boolean
+  hpRestore     Int             @default(0)
+  mpRestore     Int             @default(0)
+  attackBonus   Int             @default(0)
+  defenseBonus  Int             @default(0)
+  requiredLevel Int             @default(1)
+  requiredClassId String?
+  requiredClass Class?          @relation(fields: [requiredClassId], references: [id])
+  icon          String?
+  inventory     InventoryItem[]
+  equipment     Equipment[]
+  lootDrops     LootDrop[]
+  shopItems     ShopItem[]
+}
+
+model Shop {
+  id          String     @id
+  name        String
+  description String
+  npcId       String     @unique
+  npc         NPC        @relation(fields: [npcId], references: [id], onDelete: Cascade)
+  buyRate     Float      @default(1)
+  sellRate    Float      @default(0.5)
+  items       ShopItem[]
+}
+
+model ShopItem {
+  id        String @id @default(cuid())
+  shopId    String
+  shop      Shop   @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  itemId    String
+  item      Item   @relation(fields: [itemId], references: [id])
+  price     Int
+  stock     Int    @default(-1)
+  sortOrder Int    @default(0)
+
+  @@unique([shopId, itemId])
+}
+
+model InventoryItem {
+  id          String    @id @default(cuid())
+  characterId String
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  itemId      String
+  item        Item      @relation(fields: [itemId], references: [id])
+  quantity    Int       @default(1)
+
+  @@unique([characterId, itemId])
+}
+
+model Equipment {
+  id          String    @id @default(cuid())
+  characterId String
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  itemId      String
+  item        Item      @relation(fields: [itemId], references: [id])
+  slot        String
+
+  @@unique([characterId, slot])
+}
+
+model Spell {
+  id              String           @id
+  name            String
+  description     String
+  type            String
+  category        String           @default("Damage")
+  subType         String           @default("General")
+  element         String
+  mpCost          Int
+  cooldownSeconds Int
+  targetType      String
+  power           Int
+  scalingStat     String
+  requiredClassId String?
+  requiredClass   Class?           @relation(fields: [requiredClassId], references: [id])
+  requiredLevel   Int              @default(1)
+  statusEffect    String?
+  durationSeconds Int              @default(0)
+  effectStat      String?
+  effectAmount    Int              @default(0)
+  tickHp          Int              @default(0)
+  characters      CharacterSpell[]
+  activeEffects   CharacterStatusEffect[]
+}
+
+model CharacterSpell {
+  id          String    @id @default(cuid())
+  characterId String
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  spellId     String
+  spell       Spell     @relation(fields: [spellId], references: [id])
+
+  @@unique([characterId, spellId])
+}
+
+model CharacterStatusEffect {
+  id          String    @id @default(cuid())
+  characterId String
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  spellId     String?
+  spell       Spell?    @relation(fields: [spellId], references: [id])
+  name        String
+  effectStat  String?
+  effectAmount Int      @default(0)
+  tickHp      Int       @default(0)
+  expiresAt   DateTime
+  lastTickAt  DateTime  @default(now())
+  createdAt   DateTime  @default(now())
+
+  @@index([characterId, expiresAt])
+}
+
+model DungeonTemplate {
+  id               String            @id
+  name             String
+  description      String
+  recommendedLevel Int
+  requiredLevel    Int
+  entranceRoomId   String?
+  entryRoomId      String
+  bossMonsterId    String
+  rewardTableId    String?
+  repeatable       Boolean           @default(true)
+  cooldownMinutes  Int               @default(60)
+  maxPartySize     Int               @default(4)
+  instanced        Boolean           @default(true)
+  confirmOnEntry   Boolean           @default(true)
+  returnOnComplete Boolean           @default(true)
+  category         String            @default("Dungeon")
+  subType          String            @default("Instance")
+  rooms            DungeonRoom[]
+  instances        DungeonInstance[]
+}
+
+model DungeonRoom {
+  id                String          @id @default(cuid())
+  dungeonTemplateId String
+  dungeonTemplate   DungeonTemplate @relation(fields: [dungeonTemplateId], references: [id], onDelete: Cascade)
+  roomId            String
+  room              Room            @relation(fields: [roomId], references: [id])
+  order             Int
+}
+
+model DungeonInstance {
+  id                String                  @id @default(cuid())
+  dungeonTemplateId String
+  dungeonTemplate   DungeonTemplate         @relation(fields: [dungeonTemplateId], references: [id])
+  status            String                  @default("ACTIVE")
+  currentRoomId     String
+  createdAt         DateTime                @default(now())
+  members           DungeonInstanceMember[]
+}
+
+model DungeonInstanceMember {
+  id                String          @id @default(cuid())
+  dungeonInstanceId String
+  dungeonInstance   DungeonInstance @relation(fields: [dungeonInstanceId], references: [id], onDelete: Cascade)
+  characterId       String
+  character         Character       @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  returnRoomId      String?
+  status            String          @default("ACTIVE")
+
+  @@unique([dungeonInstanceId, characterId])
+}
+
+model LootTable {
+  id       String     @id
+  name     String
+  monsters Monster[]
+  drops    LootDrop[]
+}
+
+model LootDrop {
+  id          String    @id @default(cuid())
+  lootTableId String
+  lootTable   LootTable @relation(fields: [lootTableId], references: [id], onDelete: Cascade)
+  itemId      String
+  item        Item      @relation(fields: [itemId], references: [id])
+  chance      Float
+  minQty      Int       @default(1)
+  maxQty      Int       @default(1)
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  characterId String?
+  channel   String
+  roomId    String?
+  body      String
+  createdAt DateTime @default(now())
+
+  @@index([channel, createdAt])
+  @@index([roomId, createdAt])
+}
+
+model GameSetting {
+  id    String @id
+  key   String @unique
+  value String
+}
+
+model Announcement {
+  id        String   @id @default(cuid())
+  title     String
+  body      String
+  active    Boolean  @default(true)
+  sendNow   Boolean  @default(false)
+  sentAt    DateTime?
+  createdAt DateTime @default(now())
+}
