@@ -52,8 +52,7 @@ The project includes `socket.io` dependencies and a realtime event contract in `
 ```bash
 npm install
 cp .env.example .env
-npm run prisma:generate
-npm run setup:demo
+npm run prisma:push
 npm run dev
 ```
 
@@ -65,7 +64,24 @@ http://localhost:3000
 
 If port 3000 is busy, Next.js will print another localhost URL.
 
-## Demo Accounts
+## First Run Setup
+
+On a fresh install, SQwebRPG opens a first-run setup screen at:
+
+```text
+/setup
+```
+
+Choose one of two starting points:
+
+- **Blank Template** creates a clean starter world and lets you create the first admin account. Use this if you want to build your own game from scratch.
+- **Mirage Demo** creates the full Mirage Web RPG demo, including sample rooms, enemies, quests, items, characters, and demo accounts.
+
+After setup, the app sends the new admin to `/admin` so they can start editing the database and building the game.
+
+## Optional Demo Accounts
+
+These accounts exist only if you choose **Mirage Demo** during first-run setup or run `npm run setup:demo`.
 
 Admin:
 
@@ -93,6 +109,7 @@ Demo characters:
 
 ```text
 /          Engine welcome page
+/setup     First-run setup for blank template or Mirage demo
 /demo      Mirage Web RPG demo landing page
 /login     Login
 /register  Create account
@@ -112,8 +129,9 @@ Mirage Web RPG is a fantasy frontier demo near an ancient forest. It exists as a
 - Ruined shrine
 - Goblin cave
 - The Goblin Warrens dungeon
-- 13 rooms
-- 6 monsters
+- Clockwork Depths level 5 dungeon
+- 19 rooms
+- 10 enemies
 - 4 recruitable NPC companions
 - 5 quests
 - 10 items
@@ -193,6 +211,12 @@ npm run prisma:push
 npm run seed
 npm run setup:demo
 ```
+
+Command notes:
+
+- `npm run prisma:push` creates the SQLite schema for a fresh install.
+- `npm run dev` starts the app and lets the browser first-run setup create either a blank template or the Mirage demo.
+- `npm run setup:demo` resets the local database and directly seeds Mirage Web RPG. It is useful for development, but it is not required for users who want a blank project.
 
 ## Manual
 

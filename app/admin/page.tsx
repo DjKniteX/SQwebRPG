@@ -10,7 +10,7 @@ export default async function AdminPage() {
       <main className="page">
         <section className="panel">
           <h1>Admin Required</h1>
-          <p>This dashboard requires an admin account. Seeded admin: admin@example.com / admin123.</p>
+          <p>This dashboard requires an admin account. Use the admin created during first-run setup.</p>
         </section>
       </main>
     );

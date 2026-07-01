@@ -1,7 +1,8 @@
+import { fileURLToPath } from "node:url";
 import { hashPassword } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 
-async function main() {
+export async function seedDemoWorld() {
   await clearDatabase();
 
   await prisma.user.createMany({
@@ -294,7 +295,7 @@ async function main() {
       { id: "setting-idle-aggro-enabled", key: "idleAggroEnabled", value: "true" },
       { id: "setting-idle-aggro-seconds", key: "idleAggroSeconds", value: "15" },
       { id: "setting-world-map-excluded-zones", key: "worldMapExcludedZoneIds", value: "goblin-warrens,clockwork-depths" },
-      { id: "setting-world-template-configured", key: "worldTemplateConfigured", value: "false" },
+      { id: "setting-world-template-configured", key: "worldTemplateConfigured", value: "true" },
       { id: "setting-world-template-mode", key: "worldTemplateMode", value: "demo" },
       { id: "setting-game-name", key: "gameName", value: "Mirage Web RPG" },
       { id: "setting-engine-name", key: "engineName", value: "SQwebRPG" },
@@ -479,7 +480,8 @@ async function clearDatabase() {
   await prisma.user.deleteMany();
 }
 
-main()
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+seedDemoWorld()
   .then(async () => {
     await prisma.$disconnect();
   })
@@ -488,3 +490,4 @@ main()
     await prisma.$disconnect();
     process.exit(1);
   });
+}

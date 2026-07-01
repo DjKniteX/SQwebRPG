@@ -4,12 +4,15 @@ import { prisma } from "@/lib/db";
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const settingsRows = await prisma.gameSetting.findMany({
-    where: { key: { in: ["gameLive", "worldTemplateConfigured", "splashTitle", "splashTagline", "splashDescription", "splashFeatures"] } }
-  });
+  const [settingsRows, userCount] = await Promise.all([
+    prisma.gameSetting.findMany({
+      where: { key: { in: ["gameLive", "worldTemplateConfigured", "splashTitle", "splashTagline", "splashDescription", "splashFeatures"] } }
+    }),
+    prisma.user.count()
+  ]);
   const settings = Object.fromEntries(settingsRows.map((entry) => [entry.key, entry.value]));
   if ((settings.gameLive ?? "false").toLowerCase() === "true") redirect("/play");
-  if ((settings.worldTemplateConfigured ?? "false").toLowerCase() !== "true") redirect("/login");
+  if ((settings.worldTemplateConfigured ?? "false").toLowerCase() !== "true") redirect(userCount > 0 ? "/login" : "/setup");
   const features = (settings.splashFeatures ?? "Command-driven exploration|Turn-based combat|Data-driven content")
     .split("|")
     .map((entry) => entry.trim())

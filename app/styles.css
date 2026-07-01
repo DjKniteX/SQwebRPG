@@ -124,6 +124,29 @@ button:hover {
   margin: 7vh auto;
 }
 
+.setup {
+  max-width: 860px;
+  margin: 6vh auto;
+}
+
+.setup-choice {
+  display: grid;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.setup-choice input {
+  width: auto;
+}
+
+.setup-choice strong {
+  color: var(--gold);
+}
+
+.setup-choice span {
+  color: var(--muted);
+}
+
 .character-lobby {
   max-width: 920px;
   margin: 5vh auto;

@@ -43,7 +43,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
           </label>
           {error ? <p className="tone-danger">{error}</p> : null}
           <button className="primary">{mode === "login" ? "Login" : "Create Account"}</button>
-          <p className="muted">Demo accounts: admin@example.com / admin123, player1@example.com / player123, player2@example.com / player123.</p>
+          <p className="muted">Mirage demo accounts exist only when the demo template was selected during setup.</p>
         </form>
       </section>
     </main>

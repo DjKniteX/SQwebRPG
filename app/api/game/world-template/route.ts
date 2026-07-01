@@ -33,7 +33,7 @@ export async function POST(request: Request) {
   return NextResponse.json({ ok: true, mode: input.mode });
 }
 
-async function createBlankWorld() {
+export async function createBlankWorld() {
   await prisma.$transaction(async (tx) => {
     await tx.chatMessage.deleteMany();
     await tx.announcement.deleteMany();
@@ -105,8 +105,25 @@ async function createBlankWorld() {
     await tx.gameSetting.upsert({ where: { key: "safeRoomId" }, create: { id: "setting-safe-room", key: "safeRoomId", value: "blank-start-room" }, update: { value: "blank-start-room" } });
     await tx.gameSetting.upsert({ where: { key: "worldMapExcludedZoneIds" }, create: { id: "setting-world-map-excluded-zones", key: "worldMapExcludedZoneIds", value: "" }, update: { value: "" } });
     await tx.gameSetting.upsert({ where: { key: "currencyName" }, create: { id: "setting-currency-name", key: "currencyName", value: "Gold" }, update: { value: "Gold" } });
+    await tx.gameSetting.upsert({ where: { key: "currencyAbbreviation" }, create: { id: "setting-currency-abbreviation", key: "currencyAbbreviation", value: "g" }, update: { value: "g" } });
     await tx.gameSetting.upsert({ where: { key: "expRate" }, create: { id: "setting-exp-rate", key: "expRate", value: "1" }, update: { value: "1" } });
     await tx.gameSetting.upsert({ where: { key: "maxLevel" }, create: { id: "setting-max-level", key: "maxLevel", value: "50" }, update: { value: "50" } });
+    await tx.gameSetting.upsert({ where: { key: "maxItems" }, create: { id: "setting-max-items", key: "maxItems", value: "500" }, update: { value: "500" } });
+    await tx.gameSetting.upsert({ where: { key: "maxEnemies" }, create: { id: "setting-max-enemies", key: "maxEnemies", value: "500" }, update: { value: "500" } });
+    await tx.gameSetting.upsert({ where: { key: "maxRooms" }, create: { id: "setting-max-rooms", key: "maxRooms", value: "1000" }, update: { value: "1000" } });
+    await tx.gameSetting.upsert({ where: { key: "maxSkills" }, create: { id: "setting-max-skills", key: "maxSkills", value: "250" }, update: { value: "250" } });
+    await tx.gameSetting.upsert({ where: { key: "maxPartySize" }, create: { id: "setting-max-party-size", key: "maxPartySize", value: "4" }, update: { value: "4" } });
+    await tx.gameSetting.upsert({ where: { key: "characterLimit" }, create: { id: "setting-character-limit", key: "characterLimit", value: "3" }, update: { value: "3" } });
+    await tx.class.upsert({
+      where: { id: "adventurer" },
+      create: { id: "adventurer", name: "Adventurer", description: "A flexible starter class for a blank SQwebRPG world.", baseHp: 32, baseMp: 12, baseAttack: 6, baseDefense: 5 },
+      update: { name: "Adventurer", description: "A flexible starter class for a blank SQwebRPG world.", baseHp: 32, baseMp: 12, baseAttack: 6, baseDefense: 5 }
+    });
+    await tx.statTemplate.upsert({
+      where: { classId: "adventurer" },
+      create: { id: "adventurer-stats", classId: "adventurer", strength: 5, dexterity: 5, agility: 5, intellect: 5, wisdom: 5, stamina: 5 },
+      update: { strength: 5, dexterity: 5, agility: 5, intellect: 5, wisdom: 5, stamina: 5 }
+    });
     await tx.gameSetting.upsert({ where: { key: "gameName" }, create: { id: "setting-game-name", key: "gameName", value: "Untitled SQwebRPG World" }, update: { value: "Untitled SQwebRPG World" } });
     await tx.gameSetting.upsert({ where: { key: "engineName" }, create: { id: "setting-engine-name", key: "engineName", value: "SQwebRPG" }, update: { value: "SQwebRPG" } });
     await tx.gameSetting.upsert({ where: { key: "gameVersion" }, create: { id: "setting-game-version", key: "gameVersion", value: "v0.1" }, update: { value: "v0.1" } });
