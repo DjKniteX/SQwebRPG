@@ -120,6 +120,16 @@ Mirage Web RPG is a fantasy frontier demo near an ancient forest. It exists as a
 - 6 spells/skills
 - 4 classes
 
+## Screenshots
+
+### Mirage Web RPG Demo Landing Page
+
+![Mirage Web RPG demo landing page](docs/assets/screenshots/mirage-demo-landing.png)
+
+### Logged-In Game Client
+
+![SQwebRPG logged-in game client showing the minimap, room viewport, command log, commands, Here panel, and Party panel](docs/assets/screenshots/mirage-game-client.png)
+
 ## Implemented Features
 
 SQwebRPG currently includes:
