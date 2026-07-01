@@ -1,4 +1,5 @@
 # SQwebRPG
+# Powered by CODEX
 
 SQwebRPG is a completed reusable Next.js framework for building multiplayer browser RPGs, PBBGs, dungeon crawlers, and MUD-style games.
 
