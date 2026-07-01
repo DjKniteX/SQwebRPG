@@ -13,6 +13,9 @@ export async function inviteToParty(characterId: string, playerName: string) {
     create: { partyId: existing.id, characterId: target.id, status: "INVITED" },
     update: { status: "INVITED" }
   });
+  await prisma.chatMessage.create({
+    data: { channel: "SYSTEM", characterId: target.id, userId: target.userId, body: `Party invite from ${await characterName(characterId)}. Type "accept party" or click Accept in the notice.` }
+  });
   return { ok: true, logs: [log("system", `Party invite sent to ${target.name}.`)] };
 }
 
@@ -41,7 +44,7 @@ export async function recruitNpc(characterId: string, npcName: string) {
   const count = await countPartySlots(party.id);
   const maxPartySize = await getMaxPartySize();
   if (count >= maxPartySize) return { ok: false, logs: [log("danger", "Party is full. Dismiss someone first.")] };
-  await prisma.nPCPartyMember.create({ data: { partyId: party.id, characterId, recruitableNpcId: npc.id } });
+  await prisma.nPCPartyMember.create({ data: { partyId: party.id, characterId, recruitableNpcId: npc.id, currentHp: npc.hp, currentMp: npc.mp } });
   await prisma.character.update({ where: { id: characterId }, data: { gold: character.gold - npc.cost } });
   return { ok: true, logs: [log("success", `${npc.name} joins your party as ${npc.role}.`)] };
 }
@@ -116,4 +119,9 @@ async function getMaxPartySize() {
   const setting = await prisma.gameSetting.findUnique({ where: { key: "maxPartySize" } });
   const parsed = Number.parseInt(setting?.value ?? "4", 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 4;
+}
+
+async function characterName(characterId: string) {
+  const character = await prisma.character.findUnique({ where: { id: characterId }, select: { name: true } });
+  return character?.name ?? "A player";
 }

@@ -1,8 +1,10 @@
 # SQwebRPG Manual
 
-This manual explains what the project is, what each major part does, what you can safely change, and how the source code fits together.
+This manual explains what SQwebRPG is, what each major part does, what you can safely change, and how the source code fits together.
 
-SQwebRPG is a starter engine for browser-based RPGs, PBBGs, dungeon crawlers, and MUD-style games. It includes one demo game, **Mirage Web RPG**, but the code is meant to become a reusable framework rather than one fixed game.
+SQwebRPG is a reusable framework for browser-based RPGs, PBBGs, dungeon crawlers, and MUD-style games. It includes one demo game, **Mirage Web RPG**, but the engine is not tied to that game. Developers can build their own worlds, classes, quests, enemies, shops, dungeons, rules, and visual themes on top of it.
+
+This is engine documentation, not a finished player handbook for every game made with SQwebRPG. If you create your own game with this framework, you should write separate player-facing documentation for your game world, lore, class rules, commands, maps, events, and custom mechanics.
 
 ## 1. Big Picture
 
@@ -42,7 +44,7 @@ The demo game content is not hardcoded into the React screen. It is seeded into 
 
 ### `/`
 
-The engine welcome page. This is not the game itself. It explains what Mirage is and links to the demo, admin dashboard, docs, and login.
+The engine welcome page or configured game splash page. It can introduce the project, link to login/register, and point users toward documentation or the admin dashboard.
 
 File:
 
@@ -52,7 +54,7 @@ app/page.tsx
 
 ### `/demo`
 
-The public landing page for Mirage Web RPG. It shows seeded demo counts such as rooms, monsters, quests, items, and classes.
+The public landing page for Mirage Web RPG. It shows seeded demo counts such as rooms, enemies, quests, items, and classes. Treat this as a reference implementation, not a required structure for your own game.
 
 File:
 
@@ -437,7 +439,7 @@ Good beginner changes:
 - Change death penalty.
 - Add hit chance.
 - Add critical hits.
-- Add companion auto-attacks.
+- Tune companion AI behavior.
 
 ## 9.1 Leveling And Stat Points
 
@@ -503,7 +505,9 @@ Current item support:
 - Usable potions
 - HP restore
 - MP restore
-- Equipment data model exists, but full equipment math is a roadmap item
+- Equipment data fields for gear-driven rules
+- Shop buying and selling
+- Inn healing costs
 
 To create a new potion:
 
@@ -753,19 +757,26 @@ npm run build
 3. Adjust layout or content.
 4. Open `app/styles.css` for visual styling.
 
-## 18. What To Build Next
+## 18. What This Manual Covers
 
-Good next steps:
+This manual is for learning and operating the SQwebRPG framework:
 
-- Add true quest objective tracking.
-- Add equipment stat calculations.
-- Add structured admin forms instead of only JSON editing.
-- Add Socket.IO realtime transport.
-- Add dungeon instances.
-- Add combat cooldowns.
-- Add companion AI turns.
-- Add map editor UI.
-- Add export/import for game packages.
+- How the source folders are organized
+- How the database and Prisma schema fit together
+- How commands move from the browser to engine code
+- How the admin dashboard edits content
+- How to seed or replace demo content
+- How to extend engine systems for your own project
+
+This manual does not define the lore, balance, story, or player rules for every game built with SQwebRPG. Those belong to the individual game creator. For example, a finished game should usually have its own documentation for:
+
+- World story and setting
+- Player commands and custom shortcuts
+- Classes, races, jobs, skills, and spells
+- Quest guide or spoiler-free quest help
+- Dungeon rules and death penalties
+- Economy, crafting, shops, and trading rules
+- Community rules, staff policies, and support information
 
 ## 19. Mental Model
 
@@ -780,4 +791,4 @@ Is this demo content?                 prisma/seed.ts
 Is this explanatory text?             docs/
 ```
 
-That separation is the main design idea of Mirage.
+That separation is the main design idea of SQwebRPG.

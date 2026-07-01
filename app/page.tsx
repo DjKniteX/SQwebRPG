@@ -4,34 +4,40 @@ import { prisma } from "@/lib/db";
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const liveSetting = await prisma.gameSetting.findUnique({ where: { key: "gameLive" } });
-  if ((liveSetting?.value ?? "false").toLowerCase() === "true") redirect("/play");
+  const settingsRows = await prisma.gameSetting.findMany({
+    where: { key: { in: ["gameLive", "worldTemplateConfigured", "splashTitle", "splashTagline", "splashDescription", "splashFeatures"] } }
+  });
+  const settings = Object.fromEntries(settingsRows.map((entry) => [entry.key, entry.value]));
+  if ((settings.gameLive ?? "false").toLowerCase() === "true") redirect("/play");
+  if ((settings.worldTemplateConfigured ?? "false").toLowerCase() !== "true") redirect("/login");
+  const features = (settings.splashFeatures ?? "Command-driven exploration|Turn-based combat|Data-driven content")
+    .split("|")
+    .map((entry) => entry.trim())
+    .filter(Boolean);
 
   return (
     <main className="page">
       <section className="shell">
         <header className="topbar">
-          <h1 className="brand">SQwebRPG</h1>
+          <h1 className="brand">{settings.splashTitle ?? "SQwebRPG"}</h1>
           <nav className="nav">
-            <a className="btn primary" href="/demo">Play Demo Game</a>
-            <a className="btn" href="/admin">Admin Dashboard</a>
+            <a className="btn primary" href="/login">Login</a>
+            <a className="btn" href="/register">Register</a>
             <a className="btn" href="/docs">Read Documentation</a>
-            <a className="btn" href="/login">Create Account / Login</a>
+            <a className="btn" href="/admin">Admin</a>
           </nav>
         </header>
         <div className="grid cards" style={{ padding: 18 }}>
           <article className="panel">
-            <h2>Build Browser RPGs</h2>
-            <p>SQwebRPG is a Next.js framework for multiplayer browser-based RPGs, PBBGs, dungeon crawlers, and MUD-style games.</p>
+            <h2>{settings.splashTagline ?? "A browser RPG powered by SQwebRPG."}</h2>
+            <p>{settings.splashDescription ?? "Edit this splash page from General Settings in the admin database."}</p>
           </article>
-          <article className="panel">
-            <h2>Data-Driven Worlds</h2>
-            <p>Create rooms, enemies, quests, items, classes, spells, dungeons, companions, and settings through the database and admin editor.</p>
-          </article>
-          <article className="panel">
-            <h2>Working Demo</h2>
-            <p>Visit the included demo game, Mirage Web RPG, to move through rooms, chat, recruit NPCs, fight enemies, and explore the admin workflow.</p>
-          </article>
+          {features.slice(0, 3).map((feature) => (
+            <article className="panel" key={feature}>
+              <h2>{feature}</h2>
+              <p>Configured from the admin database, ready for your world content.</p>
+            </article>
+          ))}
         </div>
       </section>
     </main>

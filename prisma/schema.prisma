@@ -122,6 +122,7 @@ model Room {
   exitsTo        RoomExit[]      @relation("ExitTo")
   characters     Character[]
   roomMonsters   RoomMonster[]
+  objects        RoomObject[]
   npcs           NPC[]
   recruitables   RecruitableNPC[]
   dungeonRooms   DungeonRoom[]
@@ -169,6 +170,7 @@ model RoomMonster {
   monster    Monster  @relation(fields: [monsterId], references: [id], onDelete: Cascade)
   currentHp  Int
   respawnAt  DateTime?
+  respawnSeconds Int @default(60)
 
   @@index([roomId])
 }
@@ -232,8 +234,27 @@ model NPCPartyMember {
   character        Character      @relation(fields: [characterId], references: [id], onDelete: Cascade)
   recruitableNpcId String
   recruitableNpc   RecruitableNPC @relation(fields: [recruitableNpcId], references: [id])
+  currentHp        Int?
+  currentMp        Int?
 
   @@unique([characterId, recruitableNpcId])
+}
+
+model RoomObject {
+  id          String  @id
+  name        String
+  description String
+  inspectText String?
+  roomId      String
+  room        Room    @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  itemId      String?
+  item        Item?   @relation(fields: [itemId], references: [id])
+  quantity    Int     @default(1)
+  takeable    Boolean @default(false)
+  hidden      Boolean @default(false)
+  respawns    Boolean @default(false)
+  category    String  @default("Object")
+  subType     String  @default("General")
 }
 
 model Quest {
@@ -304,6 +325,7 @@ model Item {
   equipment     Equipment[]
   lootDrops     LootDrop[]
   shopItems     ShopItem[]
+  roomObjects   RoomObject[]
 }
 
 model Shop {

@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 const modelMap = {
   classes: prisma.class,
   rooms: prisma.room,
+  roomObjects: prisma.roomObject,
   enemies: prisma.monster,
   monsters: prisma.monster,
   npcs: prisma.nPC,
@@ -97,6 +98,7 @@ function orderFor(model: ModelName) {
   if (model === "quests") return { category: "asc" };
   if (model === "shopItems") return [{ shopId: "asc" }, { sortOrder: "asc" }];
   if (model === "rooms") return [{ mapGroupId: "asc" }, { y: "asc" }, { x: "asc" }];
+  if (model === "roomObjects") return [{ roomId: "asc" }, { name: "asc" }];
   if (model === "enemies" || model === "monsters") return [{ category: "asc" }, { level: "asc" }];
   return { name: "asc" };
 }

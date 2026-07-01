@@ -8,6 +8,8 @@ type Selection =
   | { type: "monster"; data: AnyRecord }
   | { type: "npc"; data: AnyRecord }
   | { type: "companion"; data: AnyRecord }
+  | { type: "player"; data: AnyRecord }
+  | { type: "object"; data: AnyRecord }
   | { type: "item"; data: AnyRecord }
   | { type: "quest"; data: AnyRecord }
   | null;
@@ -65,8 +67,10 @@ export function GameClient({
     if (!selection) return;
     const ids = [
       ...(room?.roomMonsters ?? []).map((entry: AnyRecord) => entry.id),
+      ...(room?.objects ?? []).map((entry: AnyRecord) => entry.id),
       ...(room?.npcs ?? []).map((entry: AnyRecord) => entry.id),
       ...(room?.recruitables ?? []).map((entry: AnyRecord) => entry.id),
+      ...(state?.players ?? []).map((entry: AnyRecord) => entry.id),
       ...(character?.inventory ?? []).map((entry: AnyRecord) => entry.id),
       ...(character?.quests ?? []).map((entry: AnyRecord) => entry.id)
     ];
@@ -249,9 +253,9 @@ export function GameClient({
         </section>
 
         <aside className="mud-right">
-          <HerePanel room={room} selection={selection} setSelection={setSelection} run={run} />
-          <PlayerList character={character} maxPartySize={Number.parseInt(state?.settings?.maxPartySize ?? "4", 10) || 4} party={state?.party} run={run} />
+          <HerePanel notifications={state?.notifications ?? []} players={state?.players ?? []} room={room} selection={selection} setSelection={setSelection} run={run} />
           <ActionPanel activeDungeon={state?.activeDungeon} room={room} character={character} dungeonEntrances={state?.dungeonEntrances ?? []} party={state?.party} selection={selection} run={run} switchCharacter={switchCharacter} logout={logout} />
+          <PlayerList character={character} maxPartySize={Number.parseInt(state?.settings?.maxPartySize ?? "4", 10) || 4} party={state?.party} run={run} />
         </aside>
         {menuModal ? (
           <GameMenuModal
@@ -519,25 +523,27 @@ function QuestPanel({
   onSelect: (quest: AnyRecord) => void;
   run: (command: string) => void;
 }) {
-  const quest = selected?.quest;
+  const activeQuests = quests.filter((entry) => entry.status !== "COMPLETE");
+  const activeSelected = selected?.status !== "COMPLETE" ? selected : null;
+  const quest = activeSelected?.quest;
   const objective = quest?.objectives?.[0];
   return (
     <section className="mud-box compact-list">
       <strong>Quests</strong>
-      {quests.slice(0, 4).map((entry) => (
-        <button className={selected?.id === entry.id ? "selected-row" : "list-row"} key={entry.id} onClick={() => onSelect(entry)}>
-          {entry.quest?.title} {entry.status === "COMPLETE" ? "(Done)" : ""}
+      {activeQuests.slice(0, 4).map((entry) => (
+        <button className={activeSelected?.id === entry.id ? "selected-row" : "list-row"} key={entry.id} onClick={() => onSelect(entry)}>
+          {entry.quest?.title}
         </button>
       ))}
-      {!quests.length ? <span className="muted">None active</span> : null}
+      {!activeQuests.length ? <span className="muted">None active</span> : null}
       {quest ? (
         <div className="detail-card">
           <b>{quest.title}</b>
-          <span>Status: {selected.status}</span>
+          <span>Status: {activeSelected.status}</span>
           <span>{quest.description}</span>
-          {objective ? <span>Objective: {objective.description} ({selected.progress}/{objective.targetCount})</span> : null}
+          {objective ? <span>Objective: {objective.description} ({activeSelected.progress}/{objective.targetCount})</span> : null}
           <span>Reward: {quest.rewardExp} XP, {quest.rewardGold} gold{quest.rewardItemId ? `, ${quest.rewardItemId}` : ""}</span>
-          {selected.status === "ACTIVE" ? <button onClick={() => run(`complete quest ${quest.title}`)}>Complete</button> : null}
+          {activeSelected.status === "ACTIVE" ? <button onClick={() => run(`complete quest ${quest.title}`)}>Complete</button> : null}
         </div>
       ) : <span className="muted">Accept quests from NPCs and boards in Here.</span>}
     </section>
@@ -564,14 +570,18 @@ function PlayerList({ character, maxPartySize, party, run }: { character: AnyRec
       id: entry.character.id,
       name: entry.character.name,
       level: entry.character.level,
+      hp: entry.character.hp,
+      maxHp: entry.character.maxHp,
       kind: entry.character.id === party?.leaderId ? "Leader" : "Player",
       player: true,
       self: entry.character.id === character?.id
-    })) ?? [{ id: character?.id ?? "me", name: character?.name ?? "You", level: character?.level ?? 1, kind: "Solo" }];
+    })) ?? [{ id: character?.id ?? "me", name: character?.name ?? "You", level: character?.level ?? 1, hp: character?.hp ?? 0, maxHp: character?.maxHp ?? 1, kind: "Solo" }];
   const npcMembers = party?.npcs?.map((entry: AnyRecord) => ({
     id: entry.id,
     name: entry.recruitableNpc.name,
     level: Math.max(entry.recruitableNpc.level, leaderLevel),
+    hp: entry.currentHp ?? entry.recruitableNpc.hp,
+    maxHp: entry.recruitableNpc.hp,
     kind: entry.recruitableNpc.role,
     player: false,
     self: false
@@ -583,7 +593,7 @@ function PlayerList({ character, maxPartySize, party, run }: { character: AnyRec
       {roster.slice(0, 8).map((player, index) => (
         <div className={`roster-row ${isLeader && !player.self ? "managed" : ""}`} key={player.id}>
           <span className="portrait">P{index + 1}</span>
-          <span>{player.name}<small>{player.kind}</small></span>
+          <span>{player.name}<small>{player.kind} | HP {player.hp}/{player.maxHp}</small><i className="party-hp"><i style={{ width: `${Math.max(0, Math.min(100, (player.hp / Math.max(1, player.maxHp)) * 100))}%` }} /></i></span>
           <b>Lv {player.level}</b>
           {isLeader && !player.self ? (
             <span className="party-tools">
@@ -598,11 +608,15 @@ function PlayerList({ character, maxPartySize, party, run }: { character: AnyRec
 }
 
 function HerePanel({
+  notifications,
+  players,
   room,
   selection,
   setSelection,
   run
 }: {
+  notifications: AnyRecord[];
+  players: AnyRecord[];
   room: AnyRecord;
   selection: Selection;
   setSelection: (selection: Selection) => void;
@@ -611,9 +625,27 @@ function HerePanel({
   return (
     <section className="mud-here selectable-list">
       <strong>Here</strong>
+      {notifications.map((notice) => (
+        <div className="detail-card" key={notice.id}>
+          <b>Notice</b>
+          <span>{notice.text}</span>
+          <button onClick={() => run(notice.acceptCommand)}>Accept</button>
+          <button onClick={() => run(notice.declineCommand)}>Decline</button>
+        </div>
+      ))}
+      {players.map((player: AnyRecord) => (
+        <button className={selection?.data.id === player.id ? "selected-row" : "list-row"} key={player.id} onClick={() => setSelection({ type: "player", data: player })}>
+          PC {player.name} Lv {player.level}
+        </button>
+      ))}
       {room?.roomMonsters?.map((entry: AnyRecord) => (
         <button className={selection?.data.id === entry.id ? "selected-row" : "list-row"} key={entry.id} onClick={() => setSelection({ type: "monster", data: entry })}>
           ATK {entry.monster.name} {entry.currentHp}/{entry.monster.maxHp}
+        </button>
+      ))}
+      {room?.objects?.map((object: AnyRecord) => (
+        <button className={selection?.data.id === object.id ? "selected-row" : "list-row"} key={object.id} onClick={() => setSelection({ type: "object", data: object })}>
+          OBJ {object.name}{object.takeable ? " *" : ""}
         </button>
       ))}
       {room?.npcs?.map((npc: AnyRecord) => (
@@ -626,7 +658,7 @@ function HerePanel({
           + {npc.name} ({npc.cost}g)
         </button>
       ))}
-      {!room?.roomMonsters?.length && !room?.npcs?.length && !room?.recruitables?.length ? <span className="muted">No one nearby.</span> : null}
+      {!players.length && !room?.roomMonsters?.length && !room?.objects?.length && !room?.npcs?.length && !room?.recruitables?.length ? <span className="muted">No one nearby.</span> : null}
       <SelectionDetails selection={selection} run={run} />
     </section>
   );
@@ -682,7 +714,9 @@ function ActionPanel({
             <button onClick={() => run("rest")}>Rest</button>
             {selection ? <button onClick={() => run(`inspect ${selectionLabel(selection)}`)}>Inspect</button> : null}
             {selection?.type === "npc" && !isInspectableObject(selection.data) ? <button onClick={() => run(`talk ${selection.data.name}`)}>Talk</button> : null}
+            {selection?.type === "player" ? <button onClick={() => run(`invite ${selection.data.name}`)}>Invite</button> : null}
             {selection?.type === "monster" ? <button onClick={() => run(`talk ${selection.data.monster.name}`)}>Talk</button> : null}
+            {selection?.type === "object" && selection.data.takeable ? <button onClick={() => run(`take ${selection.data.name}`)}>Take</button> : null}
             {selection?.type === "npc" && selection.data.shop ? <button onClick={() => run(`shop ${selection.data.name}`)}>Shop</button> : null}
             {selection?.type === "companion" ? <button onClick={() => run(`recruit ${selection.data.name}`)}>Recruit</button> : null}
             {dungeonEntrances[0] ? <button onClick={() => run(`enter dungeon ${dungeonEntrances[0].name}`)}>Enter Dungeon</button> : null}
@@ -770,6 +804,8 @@ function InventoryPanel({ items, selected, onSelect }: { items: AnyRecord[]; sel
 
 function selectionLabel(selection: Exclude<Selection, null>) {
   if (selection.type === "monster") return selection.data.monster.name;
+  if (selection.type === "object") return selection.data.name;
+  if (selection.type === "player") return selection.data.name;
   if (selection.type === "item") return selection.data.item?.name ?? selection.data.itemId;
   if (selection.type === "quest") return selection.data.quest?.title ?? selection.data.questId;
   return selection.data.name;
@@ -791,6 +827,25 @@ function SelectionDetails({ selection, run }: { selection: Selection; run: (comm
         <button onClick={() => run(`inspect ${selection.data.monster.name}`)}>Inspect</button>
         <button onClick={() => run(`talk ${selection.data.monster.name}`)}>Talk</button>
         <button onClick={() => run(`attack ${selection.data.monster.name}`)}>Attack</button>
+      </div>
+    );
+  }
+  if (selection.type === "player") {
+    return (
+      <div className="detail-card">
+        <b>{selection.data.name}</b>
+        <span>Player character | Level {selection.data.level}</span>
+        <button onClick={() => run(`invite ${selection.data.name}`)}>Invite</button>
+      </div>
+    );
+  }
+  if (selection.type === "object") {
+    return (
+      <div className="detail-card">
+        <b>{selection.data.name}</b>
+        <span>{selection.data.description}</span>
+        <button onClick={() => run(`inspect ${selection.data.name}`)}>Inspect</button>
+        {selection.data.takeable ? <button onClick={() => run(`take ${selection.data.name}`)}>Take</button> : null}
       </div>
     );
   }
@@ -936,18 +991,29 @@ function QuestBookContent({
   onSelect: (quest: AnyRecord) => void;
   run: (command: string) => void;
 }) {
-  const quest = selected?.quest ?? quests[0]?.quest;
-  const activeEntry = selected ?? quests[0];
+  const [tab, setTab] = useState<"active" | "completed">("active");
+  const activeQuests = quests.filter((entry) => entry.status !== "COMPLETE");
+  const completedQuests = quests.filter((entry) => entry.status === "COMPLETE");
+  const visibleQuests = tab === "active" ? activeQuests : completedQuests;
+  const selectedInTab = selected && visibleQuests.some((entry) => entry.id === selected.id) ? selected : null;
+  const activeEntry = selectedInTab ?? visibleQuests[0];
+  const quest = activeEntry?.quest;
   const objective = quest?.objectives?.[0];
   return (
     <div className="quest-book-grid">
-      <div className="menu-list">
-        {quests.map((entry) => (
+      <div>
+        <div className="quest-tabs">
+          <button className={tab === "active" ? "active" : ""} onClick={() => setTab("active")}>Active</button>
+          <button className={tab === "completed" ? "active" : ""} onClick={() => setTab("completed")}>Completed</button>
+        </div>
+        <div className="menu-list">
+        {visibleQuests.map((entry) => (
           <button className={activeEntry?.id === entry.id ? "selected-row" : "list-row"} key={entry.id} onClick={() => onSelect(entry)}>
-            {entry.quest?.title} {entry.status === "COMPLETE" ? "(Done)" : ""}
+            {entry.quest?.title}
           </button>
         ))}
-        {!quests.length ? <span className="muted">No active quests.</span> : null}
+        {!visibleQuests.length ? <span className="muted">No {tab} quests.</span> : null}
+        </div>
       </div>
       <div className="detail-card quest-detail">
         {quest ? (
@@ -958,7 +1024,7 @@ function QuestBookContent({
             {objective ? <span>Objective: {objective.description} ({activeEntry.progress}/{objective.targetCount})</span> : null}
             <span>Reward: {quest.rewardExp} XP, {quest.rewardGold} gold{quest.rewardItemId ? `, ${quest.rewardItemId}` : ""}</span>
             <span>{quest.completionText}</span>
-            {activeEntry.status === "ACTIVE" ? <button onClick={() => run(`complete quest ${quest.title}`)}>Complete Quest</button> : null}
+            {tab === "active" && activeEntry.status === "ACTIVE" ? <button onClick={() => run(`complete quest ${quest.title}`)}>Complete Quest</button> : null}
           </>
         ) : (
           <span className="muted">Select a quest to read its details.</span>
@@ -1018,15 +1084,33 @@ function CommandInput({ value, setValue, run }: { value: string; setValue: (valu
 
 function GameLog({ logs, messages }: { logs: LogLine[]; messages: AnyRecord[] }) {
   const logRef = useRef<HTMLDivElement | null>(null);
+  const [tab, setTab] = useState<"main" | "room">("main");
   useEffect(() => {
     const node = logRef.current;
     if (node) node.scrollTop = node.scrollHeight;
-  }, [logs.length, messages.length]);
+  }, [logs.length, messages.length, tab]);
+  const roomMessages = messages.filter((message) => message.channel === "ROOM");
+  const mainMessages = messages.filter((message) => message.channel !== "ROOM");
 
   return (
-    <div className="mud-log" ref={logRef}>
-      {messages.slice(-18).map((message) => <div className="tone-chat" key={message.id}>[{message.channel}] {message.body}</div>)}
-      {logs.slice(-24).map((entry, index) => <div className={`tone-${entry.tone}`} key={`${entry.text}-${index}`}>{entry.text}</div>)}
-    </div>
+    <section className="mud-log-wrap">
+      <nav className="mud-log-tabs">
+        <button className={tab === "main" ? "active" : ""} onClick={() => setTab("main")}>Main</button>
+        <button className={tab === "room" ? "active" : ""} onClick={() => setTab("room")}>Room</button>
+      </nav>
+      <div className="mud-log" ref={logRef}>
+        {tab === "main" ? (
+          <>
+            {mainMessages.slice(-10).map((message) => <div className="tone-chat" key={message.id}>[{message.channel}] {message.body}</div>)}
+            {logs.slice(-24).map((entry, index) => <div className={`tone-${entry.tone}`} key={`${entry.text}-${index}`}>{entry.text}</div>)}
+          </>
+        ) : (
+          <>
+            {roomMessages.slice(-30).map((message) => <div className="tone-chat" key={message.id}>[{message.channel}] {message.body}</div>)}
+            {!roomMessages.length ? <div className="muted">No room actions yet.</div> : null}
+          </>
+        )}
+      </div>
+    </section>
   );
 }

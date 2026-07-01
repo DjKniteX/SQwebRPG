@@ -2,8 +2,10 @@ import { sendChat } from "@/lib/engine/chat";
 import { attackMonster } from "@/lib/engine/combat";
 import { completeDungeon, enterDungeon, leaveDungeon } from "@/lib/engine/dungeons";
 import { useItem } from "@/lib/engine/items";
+import { restAtInn } from "@/lib/engine/inns";
 import { acceptParty, dismissNpc, inviteToParty, kickPartyMember, leaveParty, promotePartyLeader, recruitNpc } from "@/lib/engine/parties";
 import { acceptQuest, completeQuest, inspectTarget, talkToNpc } from "@/lib/engine/quests";
+import { takeRoomObject } from "@/lib/engine/room-objects";
 import { moveCharacter, parseDirection } from "@/lib/engine/rooms";
 import { buyItem, listShop, sellItem } from "@/lib/engine/shops";
 import { log, type CommandResult } from "@/lib/engine/types";
@@ -20,6 +22,7 @@ export async function runCommand(characterId: string, raw: string): Promise<Comm
   if (verb === "look") return { ok: true, logs: [log("system", "You take in the room again. The panels have refreshed.")] };
   if (verb === "search") return { ok: true, logs: [log("system", "You search the area. Dust, footprints, and old scratches mark the room's recent history.")] };
   if (verb === "inspect" || verb === "examine") return inspectTarget(characterId, rest);
+  if (verb === "take" || verb === "get") return takeRoomObject(characterId, rest);
   if (verb === "talk") return talkToNpc(characterId, rest);
   if (verb === "say") return sendChat(characterId, "ROOM", command.slice(4));
   if (verb === "global" || lower.startsWith("/global ")) return sendChat(characterId, "GLOBAL", command.replace(/^\/?global\s+/i, ""));
@@ -50,7 +53,8 @@ export async function runCommand(characterId: string, raw: string): Promise<Comm
   if (verb === "leave" && restParts[0] === "party") return leaveParty(characterId);
   if (verb === "recruit") return recruitNpc(characterId, rest);
   if (verb === "dismiss") return dismissNpc(characterId, rest);
-  if (verb === "rest") return { ok: true, logs: [log("success", "You rest for a moment. Use a potion for now; full rest rules are engine-configurable.")] };
+  if (verb === "inn") return restAtInn(characterId, rest);
+  if (verb === "rest") return restAtInn(characterId, rest);
   if (["stats", "inventory", "equipment", "quests"].includes(verb)) {
     return { ok: true, logs: [log("system", `${verb} are visible in the side panels.`)] };
   }
@@ -58,7 +62,7 @@ export async function runCommand(characterId: string, raw: string): Promise<Comm
     return {
       ok: true,
       logs: [
-        log("system", "Commands: look, search, inspect, north/south/east/west, talk, shop, buy, sell, say, global, attack, cast, use, train strength/dexterity/agility/intellect/wisdom/stamina, accept quest, complete quest, enter dungeon, leave dungeon, complete dungeon, invite, kick, promote, accept party, recruit, dismiss, rest.")
+        log("system", "Commands: look, search, inspect, take, north/south/east/west, talk, shop, buy, sell, say, global, attack, cast, use, train strength/dexterity/agility/intellect/wisdom/stamina, accept quest, complete quest, enter dungeon, leave dungeon, complete dungeon, invite, kick, promote, accept party, recruit, dismiss, rest/inn.")
       ]
     };
   }

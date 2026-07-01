@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 const adminSections = [
-  { id: "world", label: "World", models: ["rooms", "mapGroups", "dungeons"] },
+  { id: "world", label: "World", models: ["rooms", "roomObjects", "mapGroups", "dungeons"] },
   { id: "actors", label: "Actors", models: ["npcs", "companions", "enemies"] },
   { id: "shops", label: "Shops", models: ["shops", "shopItems", "items"] },
   { id: "progression", label: "Progression", models: ["classes", "spells", "quests"] },
@@ -13,6 +13,7 @@ const adminSections = [
 const modelLabels: Record<string, string> = {
   settings: "General Settings",
   mapGroups: "Map Groups",
+  roomObjects: "Room Objects",
   enemies: "Enemies",
   npcs: "NPCs",
   companions: "NPC Companions",
@@ -24,6 +25,7 @@ const starterJson: Record<string, Record<string, any>> = {
   settings: { id: "setting-new", key: "newSetting", value: "" },
   mapGroups: { id: "new-map-group", name: "New Area", description: "", category: "Village", zoneId: null },
   rooms: { id: "new-room", name: "New Room", description: "", zoneId: "", safe: false, x: 0, y: 0, mapTileType: "town", mapIcon: null, imageUrl: "/images/rooms/town.svg", category: "Area", subType: "Room", mapGroupId: null },
+  roomObjects: { id: "new-room-object", name: "New Object", description: "", inspectText: "", roomId: "", itemId: null, quantity: 1, takeable: false, hidden: false, respawns: false, category: "Object", subType: "General" },
   npcs: { id: "new-npc", name: "New NPC", role: "Villager", dialogue: "Hello there.", inspectText: "A local person with their own story.", roomId: "" },
   enemies: { id: "new-enemy", name: "New Enemy", description: "", inspectText: "Studying this enemy reveals its threat and behavior.", dialogue: "The enemy growls.", category: "Regular", subType: "Monster", level: 1, maxHp: 10, attack: 1, defense: 0, expReward: 1, goldReward: 0, boss: false, aggressive: false, lootTableId: null },
   shops: { id: "new-shop", name: "New Shop", description: "", npcId: "", buyRate: 1, sellRate: 0.5 },

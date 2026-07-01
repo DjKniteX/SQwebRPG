@@ -1,6 +1,8 @@
 # SQwebRPG
 
-SQwebRPG is a reusable Next.js framework for building multiplayer browser RPGs, PBBGs, dungeon crawlers, and MUD-style games.
+SQwebRPG is a completed reusable Next.js framework for building multiplayer browser RPGs, PBBGs, dungeon crawlers, and MUD-style games.
+
+It is not one fixed game. It is a foundation that developers can use to create their own worlds, rules, content, stories, and player experiences. You can use it as-is, modify it, reskin it, extend it, or build a completely different browser RPG on top of it.
 
 It includes:
 
@@ -10,7 +12,9 @@ It includes:
 - A playable demo game: **Mirage Web RPG**
 - A browser admin/database editor inspired by RPG Maker database windows
 - XP-based leveling with assignable RPG stats
-- Documentation for creating your own game content
+- Documentation for using and extending the SQwebRPG framework
+
+The documentation in this repository explains how to use SQwebRPG itself. If you build your own game with this framework, your game should have its own player-facing documentation for its story, classes, commands, maps, house rules, and content.
 
 ## Technologies And Why They Are Used
 
@@ -98,7 +102,7 @@ Demo characters:
 
 ## Demo Game
 
-Mirage Web RPG is a fantasy frontier demo near an ancient forest. It includes:
+Mirage Web RPG is a fantasy frontier demo near an ancient forest. It exists as a reference game so developers and players can explore how SQwebRPG systems fit together. It includes:
 
 - Starter town
 - Tavern
@@ -114,6 +118,34 @@ Mirage Web RPG is a fantasy frontier demo near an ancient forest. It includes:
 - 10 items
 - 6 spells/skills
 - 4 classes
+
+## Implemented Features
+
+SQwebRPG currently includes:
+
+- Browser-based old-school MUD/JRPG client
+- Custom login, registration, logout, and character selection
+- Character creation with configurable class limits
+- Data-driven rooms, zones, exits, room images, room objects, NPCs, enemies, shops, quests, items, spells, skills, classes, and settings
+- Admin dashboard for editing game content without touching engine code
+- General settings for game name, version display, currency, EXP rates, party size, shop buyback, level caps, content limits, splash page content, and live mode
+- Splash page flow for configured games and first-run world setup
+- Mirage Web RPG demo world plus blank template setup
+- Grid movement using commands, WASD, arrow keys, and clickable exits
+- Minimap, world map modal, colored room tiles, and map grouping support
+- Here/Object interaction panel with players, NPCs, enemies, objects, shops, companions, and party invite notices
+- Command log with main and room tabs
+- Global, room, party, and command-driven chat support
+- Turn-based combat with enemy AI, companion AI, rewards, loot, EXP, and death handling
+- Aggressive enemy behavior and monster respawn support
+- Party system with player invites, accept/decline flow, party leader, kick/remove, promote player leader, NPC companions, shared party visibility, and party HP display
+- Quest system with active and completed quest views, objective progress, non-repeatable quest handling, and NPC/board quest sources
+- Leveling system with assignable stat points
+- Inventory, usable items, stackable items, shops, item buying, item selling, and inn healing
+- Spell and skill categories, support/damage behavior, healing friendly targets, and buff-style data fields
+- Instanced dungeon flow with entry confirmation, level restrictions, party join prompts, completion return, and manual leave option
+- Announcements with immediate send support
+- Beginner-friendly source documentation and admin/editor guides
 
 ## Folder Structure
 
@@ -165,15 +197,4 @@ You can also read it in the browser at:
 /docs
 ```
 
-Start there if you want to understand what each folder does, what is safe to change, how commands flow through the engine, and how to extend the demo into your own game.
-
-## Roadmap
-
-- Replace short polling with Socket.IO gateway
-- Add true dungeon instancing
-- Add cooldown timers and combat ticks
-- Add structured admin forms on top of JSON editor mode
-- Add equipment calculations
-- Add quest objective automation
-- Add permissions and audit logs
-- Add content export/import for standalone game packages
+Start there if you want to understand what each folder does, what is safe to change, how commands flow through the engine, and how to build your own game with SQwebRPG.

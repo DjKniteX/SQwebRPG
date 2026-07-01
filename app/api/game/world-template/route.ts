@@ -23,6 +23,11 @@ export async function POST(request: Request) {
     await upsertSetting("topRightMode", "clock", "setting-top-right-mode");
     await upsertSetting("gameLive", "false", "setting-game-live");
     await upsertSetting("globalBuybackRate", "0.5", "setting-global-buyback-rate");
+    await upsertSetting("innRestCost", "10", "setting-inn-rest-cost");
+    await upsertSetting("splashTitle", "Mirage Web RPG", "setting-splash-title");
+    await upsertSetting("splashTagline", "A frontier MUD/JRPG demo built on SQwebRPG.", "setting-splash-tagline");
+    await upsertSetting("splashDescription", "Explore old-school rooms, recruit companions, crawl dungeons, and build your own world from the admin database.", "setting-splash-description");
+    await upsertSetting("splashFeatures", "Command-driven exploration|Turn-based combat|Data-driven quests, shops, rooms, and enemies", "setting-splash-features");
   }
 
   return NextResponse.json({ ok: true, mode: input.mode });
@@ -51,6 +56,7 @@ async function createBlankWorld() {
     await tx.quest.deleteMany();
     await tx.recruitableNPC.deleteMany();
     await tx.nPC.deleteMany();
+    await tx.roomObject.deleteMany();
     await tx.roomMonster.deleteMany();
     await tx.monster.deleteMany();
     await tx.lootDrop.deleteMany();
@@ -107,6 +113,11 @@ async function createBlankWorld() {
     await tx.gameSetting.upsert({ where: { key: "topRightMode" }, create: { id: "setting-top-right-mode", key: "topRightMode", value: "clock" }, update: { value: "clock" } });
     await tx.gameSetting.upsert({ where: { key: "gameLive" }, create: { id: "setting-game-live", key: "gameLive", value: "false" }, update: { value: "false" } });
     await tx.gameSetting.upsert({ where: { key: "globalBuybackRate" }, create: { id: "setting-global-buyback-rate", key: "globalBuybackRate", value: "0.5" }, update: { value: "0.5" } });
+    await tx.gameSetting.upsert({ where: { key: "innRestCost" }, create: { id: "setting-inn-rest-cost", key: "innRestCost", value: "10" }, update: { value: "10" } });
+    await tx.gameSetting.upsert({ where: { key: "splashTitle" }, create: { id: "setting-splash-title", key: "splashTitle", value: "Untitled SQwebRPG World" }, update: { value: "Untitled SQwebRPG World" } });
+    await tx.gameSetting.upsert({ where: { key: "splashTagline" }, create: { id: "setting-splash-tagline", key: "splashTagline", value: "A new browser RPG is being prepared." }, update: { value: "A new browser RPG is being prepared." } });
+    await tx.gameSetting.upsert({ where: { key: "splashDescription" }, create: { id: "setting-splash-description", key: "splashDescription", value: "Edit this splash page from General Settings in the admin database." }, update: { value: "Edit this splash page from General Settings in the admin database." } });
+    await tx.gameSetting.upsert({ where: { key: "splashFeatures" }, create: { id: "setting-splash-features", key: "splashFeatures", value: "Create maps|Add enemies|Publish your world" }, update: { value: "Create maps|Add enemies|Publish your world" } });
     await tx.gameSetting.upsert({ where: { key: "worldTemplateConfigured" }, create: { id: "setting-world-template-configured", key: "worldTemplateConfigured", value: "true" }, update: { value: "true" } });
     await tx.gameSetting.upsert({ where: { key: "worldTemplateMode" }, create: { id: "setting-world-template-mode", key: "worldTemplateMode", value: "blank" }, update: { value: "blank" } });
   });

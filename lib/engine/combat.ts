@@ -51,10 +51,10 @@ export async function attackMonster(characterId: string, target: string, spellId
     logs.push(...(await progressQuestObjective(characterId, "Kill", roomMonster.monster.id)));
     logs.push(...(await completeDungeonForBoss(characterId, roomMonster.monster.id)));
   } else {
-    logs.push(...(await monsterAttacksCharacter(characterId, roomMonster.monster, currentPlayerHp)));
+    logs.push(...(await monsterAttacksParty(characterId, roomMonster.monster, currentPlayerHp)));
   }
 
-  await systemMessage(`${character.name} fights ${roomMonster.monster.name}.`, character.roomId);
+  await systemMessage(`${character.name} fights ${roomMonster.monster.name}. ${logs.map((entry) => entry.text).join(" ")}`, character.roomId);
   return { ok: true, logs };
 }
 
@@ -82,8 +82,11 @@ async function healFriendlyTarget(characterId: string, target: string, spell: { 
 
   const npcTarget = party?.npcs?.find((entry) => entry.recruitableNpc.name.toLowerCase().includes(targetName));
   if (npcTarget) {
+    const currentHp = npcTarget.currentHp ?? npcTarget.recruitableNpc.hp;
+    const healedHp = Math.min(npcTarget.recruitableNpc.hp, currentHp + healAmount);
+    await prisma.nPCPartyMember.update({ where: { id: npcTarget.id }, data: { currentHp: healedHp } });
     await prisma.character.update({ where: { id: characterId }, data: { mp: character.mp - spell.mpCost } });
-    return { ok: true, logs: [log("success", `You cast ${spell.name} on ${npcTarget.recruitableNpc.name}. They steady themselves for the next exchange.`)] };
+    return { ok: true, logs: [log("success", `You cast ${spell.name} on ${npcTarget.recruitableNpc.name}. HP ${healedHp}/${npcTarget.recruitableNpc.hp}.`)] };
   }
 
   const healedHp = Math.min(character.maxHp, character.hp + healAmount);
@@ -181,7 +184,7 @@ export async function processIdleAggro(characterId: string) {
   if (!roomMonster) return [];
 
   await prisma.character.update({ where: { id: characterId }, data: { lastAggroAt: new Date() } });
-  return [log("danger", `${roomMonster.monster.name} notices you lingering here.`), ...(await monsterAttacksCharacter(characterId, roomMonster.monster, character.hp))];
+  return [log("danger", `${roomMonster.monster.name} notices you lingering here.`), ...(await monsterAttacksParty(characterId, roomMonster.monster, character.hp))];
 }
 
 async function runCompanionTurns(characterId: string, roomMonsterId: string, monster: any, monsterHp: number, playerHp: number, playerMaxHp: number) {
@@ -197,6 +200,11 @@ async function runCompanionTurns(characterId: string, roomMonsterId: string, mon
   for (const link of partyLink?.party.npcs ?? []) {
     if (nextMonsterHp <= 0) break;
     const npc = link.recruitableNpc;
+    const npcHp = link.currentHp ?? npc.hp;
+    if (npcHp <= 0) {
+      logs.push(log("danger", `${npc.name} is down and cannot act.`));
+      continue;
+    }
     const behavior = npc.aiBehavior.toLowerCase();
     if ((behavior.includes("healer") || npc.role.toLowerCase().includes("healer")) && nextPlayerHp < Math.ceil(playerMaxHp * 0.55)) {
       const healed = Math.min(playerMaxHp, nextPlayerHp + 10 + npc.level * 4);
@@ -219,6 +227,22 @@ async function runCompanionTurns(characterId: string, roomMonsterId: string, mon
   return { logs, monsterHp: nextMonsterHp, playerHp: nextPlayerHp };
 }
 
+async function monsterAttacksParty(characterId: string, monster: { name: string; attack: number }, currentHp: number) {
+  const partyLink = await prisma.partyMember.findFirst({
+    where: { characterId, status: "ACTIVE" },
+    include: { party: { include: { npcs: { include: { recruitableNpc: true } } } } }
+  });
+  const livingNpcs = (partyLink?.party.npcs ?? []).filter((entry) => (entry.currentHp ?? entry.recruitableNpc.hp) > 0);
+  if (livingNpcs.length && Math.random() < 0.45) {
+    const target = livingNpcs[Math.floor(Math.random() * livingNpcs.length)];
+    const incoming = Math.max(1, monster.attack - target.recruitableNpc.defense);
+    const hp = Math.max(0, (target.currentHp ?? target.recruitableNpc.hp) - incoming);
+    await prisma.nPCPartyMember.update({ where: { id: target.id }, data: { currentHp: hp } });
+    return [log("combat", `${monster.name} hits ${target.recruitableNpc.name} for ${incoming}. HP: ${hp}/${target.recruitableNpc.hp}.`)];
+  }
+  return monsterAttacksCharacter(characterId, monster, currentHp);
+}
+
 async function monsterAttacksCharacter(characterId: string, monster: { name: string; attack: number }, currentHp: number) {
   const character = await prisma.character.findUniqueOrThrow({ where: { id: characterId }, include: { room: true } });
   const incoming = Math.max(1, monster.attack - character.defense);
@@ -239,6 +263,10 @@ async function monsterAttacksCharacter(characterId: string, monster: { name: str
 async function defeatMonster(characterId: string, roomMonster: Awaited<ReturnType<typeof prisma.roomMonster.findFirstOrThrow>> & { monster: any }) {
   const monster = roomMonster.monster;
   const logs = [log("success", `${monster.name} is defeated. You gain ${monster.expReward} EXP and ${monster.goldReward} gold.`)];
+  await prisma.roomMonster.update({
+    where: { id: roomMonster.id },
+    data: { currentHp: 0, respawnAt: new Date(Date.now() + Math.max(5, roomMonster.respawnSeconds ?? 60) * 1000) }
+  });
   logs.push(...(await awardExperience(characterId, monster.expReward, monster.goldReward)));
 
   const drop = monster.lootTable?.drops?.find((candidate: { chance: number }) => candidate.chance >= Math.random());

@@ -18,6 +18,7 @@ export function parseDirection(input: string) {
 }
 
 export async function getRoomState(characterId: string) {
+  await processMonsterRespawns();
   const character = await prisma.character.findUniqueOrThrow({
     where: { id: characterId },
     include: {
@@ -26,6 +27,7 @@ export async function getRoomState(characterId: string) {
         include: {
           zone: true,
           exitsFrom: { include: { toRoom: true }, orderBy: { direction: "asc" } },
+          objects: { where: { hidden: false }, include: { item: true }, orderBy: { name: "asc" } },
           npcs: { include: { questSource: { include: { objectives: true } }, shop: { include: { items: { include: { item: true }, orderBy: { sortOrder: "asc" } } } } } },
           recruitables: true,
           roomMonsters: { include: { monster: true }, where: { currentHp: { gt: 0 } } }
@@ -87,23 +89,63 @@ export async function getRoomState(characterId: string) {
       }
     }
   });
+  const partyInvites = await prisma.partyMember.findMany({
+    where: { characterId, status: "INVITED" },
+    include: { party: { include: { members: { where: { status: "ACTIVE" }, include: { character: true } } } } }
+  });
+  const notifications = partyInvites.map((invite) => {
+    const leader = invite.party.members.find((member) => member.characterId === invite.party.leaderId)?.character;
+    return {
+      id: invite.id,
+      type: "party-invite",
+      text: `${leader?.name ?? "A player"} invited you to a party.`,
+      acceptCommand: "accept party",
+      declineCommand: "decline party"
+    };
+  });
   const settingsRows = await prisma.gameSetting.findMany({
     where: { key: { in: ["maxPartySize", "currencyName", "currencyAbbreviation", "engineName", "gameVersion", "topRightMode"] } }
   });
   const settings = Object.fromEntries(settingsRows.map((entry) => [entry.key, entry.value]));
+  const unavailableQuestIds = new Set(
+    character.quests
+      .filter((entry) => entry.status === "ACTIVE" || entry.status === "COMPLETE")
+      .map((entry) => entry.questId)
+  );
+  const room = {
+    ...character.room,
+    npcs: character.room.npcs.map((npc) => ({
+      ...npc,
+      questSource: npc.questSource.filter((quest) => !unavailableQuestIds.has(quest.id))
+    }))
+  };
 
   return {
     character,
     party: activePartyLink?.party ?? null,
-    room: character.room,
+    room,
     players,
     messages: messages.reverse(),
     mapRooms,
     worldMapRooms,
     dungeonEntrances,
     activeDungeon,
+    notifications,
     settings
   };
+}
+
+export async function processMonsterRespawns() {
+  const due = await prisma.roomMonster.findMany({
+    where: { currentHp: { lte: 0 }, respawnAt: { lte: new Date() } },
+    include: { monster: true }
+  });
+  for (const spawn of due) {
+    await prisma.roomMonster.update({
+      where: { id: spawn.id },
+      data: { currentHp: spawn.monster.maxHp, respawnAt: null }
+    });
+  }
 }
 
 export async function moveCharacter(characterId: string, direction: Direction) {

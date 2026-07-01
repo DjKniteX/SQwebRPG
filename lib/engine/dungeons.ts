@@ -9,11 +9,15 @@ export async function enterDungeon(characterId: string, dungeonName = "") {
       partyMembers: { include: { party: { include: { members: { include: { character: true } } } } } }
     }
   });
-  const dungeonFilters = [{ entranceRoomId: character.roomId }, { entryRoomId: character.roomId }];
-  if (dungeonName) dungeonFilters.push({ name: { contains: dungeonName } } as any);
-  const dungeon = await prisma.dungeonTemplate.findFirst({ where: { OR: dungeonFilters } });
+  const dungeon = await prisma.dungeonTemplate.findFirst({
+    where: {
+      OR: [{ entranceRoomId: character.roomId }, { entryRoomId: character.roomId }],
+      ...(dungeonName ? { name: { contains: dungeonName } } : {})
+    }
+  });
   if (!dungeon) return { ok: false, logs: [log("danger", "No dungeon entrance is here.")] };
   if (character.level < dungeon.requiredLevel) return { ok: false, logs: [log("danger", `You must be level ${dungeon.requiredLevel} to enter ${dungeon.name}.`)] };
+  await resetDungeonSpawns(dungeon.id);
 
   const party = character.partyMembers.find((entry) => entry.status === "ACTIVE")?.party;
   const eligibleMembers = (party?.members ?? [{ characterId, character }])
@@ -55,6 +59,19 @@ export async function enterDungeon(characterId: string, dungeonName = "") {
       log("system", `${eligibleMembers.length} member(s) entered. Instance ${instance.id}.`)
     ]
   };
+}
+
+async function resetDungeonSpawns(dungeonTemplateId: string) {
+  const spawns = await prisma.roomMonster.findMany({
+    where: { room: { dungeonRooms: { some: { dungeonTemplateId } } } },
+    include: { monster: true }
+  });
+  for (const spawn of spawns) {
+    await prisma.roomMonster.update({
+      where: { id: spawn.id },
+      data: { currentHp: spawn.monster.maxHp, respawnAt: null }
+    });
+  }
 }
 
 export async function completeDungeon(characterId: string) {

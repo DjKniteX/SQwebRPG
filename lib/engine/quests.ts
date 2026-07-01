@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { log } from "@/lib/engine/types";
 import { awardExperience } from "@/lib/engine/progression";
+import { inspectRoomObject } from "@/lib/engine/room-objects";
 
 export async function acceptQuest(characterId: string, questIdOrName: string) {
   const character = await prisma.character.findUniqueOrThrow({ where: { id: characterId } });
@@ -113,6 +114,9 @@ export async function inspectTarget(characterId: string, targetNameOrId: string)
       logs: [log("system", `${character.room.name}: ${character.room.description}`)]
     };
   }
+
+  const roomObject = await inspectRoomObject(characterId, target);
+  if (roomObject) return roomObject;
 
   const [npc, companion, roomMonster, item] = await Promise.all([
     prisma.nPC.findFirst({
